@@ -5,7 +5,9 @@ COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* .npmrc* ./
 RUN npm ci || yarn install || pnpm i
 COPY . .
 
-RUN npm run build || yarn build || pnpm build
+ARG ENV
+ENV ENV=$ENV
+RUN npm run build --mode $ENV
 
 # serve
 FROM nginx:1.27-alpine
