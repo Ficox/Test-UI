@@ -8,19 +8,20 @@ on:
 jobs:
   docker:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     permissions:
       contents: read
       packages: write
 
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}    # owner/repo
-
     concurrency:
       group: docker-${{ github.ref_name }}
       cancel-in-progress: false
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE: ghcr.io/${{ github.repository_owner }}/test-ui
+      ENV: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
 
     steps:
       - name: Checkout
@@ -33,20 +34,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set ENV value
-        id: setenv
-        run: |
-          if [ "${GITHUB_REF_NAME}" = "main" ]; then
-            echo "ENV=prod" >> $GITHUB_ENV
-          else
-            echo "ENV=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          fi
-
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=${{ env.ENV }}-latest
             type=raw,value=${{ env.ENV }}-${{ github.sha }}
@@ -60,3 +52,8 @@ jobs:
             ENV=${{ env.ENV }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Rollout restart test-ui
+        run: |
+          kubectl -n test-${{ env.ENV }} rollout restart deployment/test-ui
+          kubectl -n test-${{ env.ENV }} rollout status deployment/test-ui
