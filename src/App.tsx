@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getCounter, increment } from "./api";
 import "./styles.css";
 
-const UI_VERSION = "1.0.0";
+const UI_VERSION = "1.0.1";
 
 export default function App() {
   const [count, setCount] = useState<number>(0);
